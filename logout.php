@@ -1,0 +1,1 @@
+<?php require_once __DIR__.'/config.php'; unset($_SESSION['user']);flash('از حساب کاربری خارج شدی.');header('Location: index.php');exit;

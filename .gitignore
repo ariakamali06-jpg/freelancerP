@@ -1,0 +1,8 @@
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.DS_Store
+.env
+.DS_Store
+uploads/
