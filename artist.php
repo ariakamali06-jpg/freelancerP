@@ -74,6 +74,78 @@ require __DIR__ . '/includes/header.php';
 
                 <h3 style="margin-top:20px">درباره <?= e($artist['name']) ?></h3>
                 <p><?= e($artist['bio']) ?></p>
+
+                <?php
+                /* --------- نظرات واقعی --------- */
+                $reviews = [];
+                if ($p) {
+                    try {
+                        $s = $p->prepare(
+                            "SELECT r.*, u.name AS user_name
+                             FROM reviews r JOIN users u ON u.id = r.user_id
+                             WHERE r.artist_id = ? ORDER BY r.created_at DESC LIMIT 10"
+                        );
+                        $s->execute([(int)$artist['id']]);
+                        $reviews = $s->fetchAll();
+                    } catch (Throwable $e) {}
+                }
+                ?>
+
+                <?php if ($reviews): ?>
+                    <h3 style="margin-top:24px">نظرات مشتری‌ها</h3>
+                    <?php foreach ($reviews as $rv): ?>
+                        <div class="card" style="padding:12px 16px;margin-bottom:10px">
+                            <b style="font-size:13px"><?= e($rv['user_name']) ?></b>
+                            <span style="color:var(--pink);font-size:12px"> · <?= str_repeat('⭐', (int)$rv['rating']) ?></span>
+                            <small class="small-muted" style="display:block;font-size:11px"><?= fa_date($rv['created_at']) ?></small>
+                            <?php if ($rv['comment']): ?>
+                                <p style="margin:6px 0 0;font-size:13px"><?= e($rv['comment']) ?></p>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+
+                <?php
+                /* --------- فرم ثبت نظر (فقط با سفارش تکمیل‌شده) --------- */
+                $canReview = false;
+                if ($p && is_logged_in() && is_customer()) {
+                    try {
+                        $s = $p->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ? AND artist_id = ? AND status = 'completed'");
+                        $s->execute([(int)$user['id'], (int)$artist['id']]);
+                        $canReview = (bool)$s->fetchColumn();
+
+                        if ($canReview) {
+                            $s2 = $p->prepare('SELECT COUNT(*) FROM reviews WHERE user_id = ? AND artist_id = ?');
+                            $s2->execute([(int)$user['id'], (int)$artist['id']]);
+                            $canReview = !(bool)$s2->fetchColumn();
+                        }
+                    } catch (Throwable $e) {}
+                }
+                ?>
+
+                <?php if ($canReview): ?>
+                    <div class="form-card" style="max-width:100%;margin-top:18px">
+                        <h3 style="margin-top:0">تجربه‌ات را بنویس</h3>
+                        <form method="post" action="review-submit.php">
+                            <input type="hidden" name="artist_id" value="<?= e($artist['id']) ?>">
+                            <div class="field">
+                                <label for="rating">امتیاز</label>
+                                <select id="rating" name="rating" required>
+                                    <option value="5">⭐⭐⭐⭐⭐ — عالی</option>
+                                    <option value="4">⭐⭐⭐⭐ — خوب</option>
+                                    <option value="3">⭐⭐⭐ — متوسط</option>
+                                    <option value="2">⭐⭐ — ضعیف</option>
+                                    <option value="1">⭐ — بد</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="comment">نظر</label>
+                                <textarea id="comment" name="comment" rows="3" placeholder="کیفیت کار، تعامل و تحویل چطور بود؟"></textarea>
+                            </div>
+                            <button type="submit" class="btn">ثبت نظر</button>
+                        </form>
+                    </div>
+                <?php endif; ?>
             </div>
 
             <!-- ===== ستون راست: سفارش ===== -->

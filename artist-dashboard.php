@@ -59,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $p = db();
 $myProjects = [];
 $myOrders   = [];
+$myArtworks = [];
+$earningsByMonth = [];
 
 if ($p) {
     try {
@@ -83,7 +85,35 @@ if ($p) {
         $s->execute([$user['id']]);
         $myOrders = $s->fetchAll();
     } catch (Throwable $e) {}
+
+    // آثار من
+    try {
+        $s = $p->prepare(
+            "SELECT aw.*, a.id AS artist_row_id
+             FROM artworks aw JOIN artists a ON a.id = aw.artist_id
+             WHERE a.user_id = ?
+             ORDER BY aw.id DESC"
+        );
+        $s->execute([$user['id']]);
+        $myArtworks = $s->fetchAll();
+    } catch (Throwable $e) {}
+
+    // درآمد ماهانه (جلالی)
+    try {
+        $s = $p->prepare(
+            "SELECT amount, created_at FROM orders
+             WHERE artist_id = ? AND status = 'completed'"
+        );
+        $s->execute([$user['id']]);
+        foreach ($s->fetchAll() as $row) {
+            $month = jalali('M Y', $row['created_at']);
+            $earningsByMonth[$month] = ($earningsByMonth[$month] ?? 0) + (float)$row['amount'];
+        }
+        $earningsByMonth = array_reverse($earningsByMonth, true);
+    } catch (Throwable $e) {}
 }
+
+$maxEarning = $earningsByMonth ? max($earningsByMonth) : 0;
 
 $allProjects = [];
 if ($p) {
@@ -207,7 +237,7 @@ require __DIR__ . '/includes/header.php';
                                 <td style="padding:12px">
                                     <span class="pill"><?= e($order['status']) ?></span>
                                 </td>
-                                <td style="padding:12px" dir="ltr"><?= e($order['created_at']) ?></td>
+                                <td style="padding:12px"><?= fa_date($order['created_at']) ?></td>
                                 <td style="padding:12px">
                                     <form method="post" style="display:inline">
                                         <input type="hidden" name="action" value="status">
@@ -218,12 +248,114 @@ require __DIR__ . '/includes/header.php';
                                             <option value="cancelled"  <?= $order['status']==='cancelled'?'selected':'' ?>>لغو شد</option>
                                         </select>
                                     </form>
+                                    <a class="btn btn-soft" style="padding:5px 12px;font-size:11px;margin-right:6px"
+                                       href="chat.php?order=<?= e($order['id']) ?>">💬</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
+        <?php endif; ?>
+
+        <!-- آثار من + آپلود نمونه‌کار -->
+        <div class="section-heading">
+            <div><h2>آثار من</h2></div>
+            <span class="small-muted"><?= count($myArtworks) ?> اثر در گالری</span>
+        </div>
+
+        <div class="detail-layout" style="grid-template-columns:2fr 1fr;margin-bottom:28px">
+            <!-- لیست آثار -->
+            <div>
+                <?php if (empty($myArtworks)): ?>
+                    <div class="empty-state" style="margin:0">
+                        <p>هنوز اثری در گالری نداری. اولین اثرت را آپلود کن!</p>
+                    </div>
+                <?php else: ?>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+                        <?php foreach ($myArtworks as $aw): ?>
+                            <a href="artwork.php?id=<?= e($aw['id']) ?>" class="card" style="padding:8px;display:block">
+                                <img src="<?= e($aw['image'] ?: 'assets/images/work1.jpg') ?>"
+                                     alt="<?= e($aw['title']) ?>"
+                                     style="width:100%;height:110px;object-fit:cover;border-radius:8px">
+                                <p style="margin:8px 0 0;font-size:12px;font-weight:600"><?= e($aw['title']) ?></p>
+                                <small class="small-muted"><?= fa_num($aw['price']) ?> تومان · <?= e($aw['status']) ?></small>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- فرم آپلود -->
+            <div>
+                <form class="form-card" method="post" action="artwork-upload.php"
+                      enctype="multipart/form-data" style="max-width:100%">
+                    <h3 style="margin-top:0">آپلود اثر جدید 🎨</h3>
+
+                    <div class="field">
+                        <label for="aw-title">عنوان اثر</label>
+                        <input type="text" id="aw-title" name="title" required minlength="2" placeholder="مثلاً: پرتره زن با گل سرخ">
+                    </div>
+
+                    <div class="field">
+                        <label for="aw-technique">تکنیک</label>
+                        <select id="aw-technique" name="technique">
+                            <option value="رنگ روغن">رنگ روغن</option>
+                            <option value="آبرنگ">آبرنگ</option>
+                            <option value="سیاه‌قلم">سیاه‌قلم</option>
+                            <option value="اکریلیک">اکریلیک</option>
+                            <option value="مداد رنگی">مداد رنگی</option>
+                            <option value="نقاشی دیجیتال">نقاشی دیجیتال</option>
+                            <option value="سبک فانتزی">سبک فانتزی</option>
+                        </select>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="field">
+                            <label for="aw-size">ابعاد</label>
+                            <input type="text" id="aw-size" name="size" placeholder="مثلاً: ۵۰×۷۰">
+                        </div>
+                        <div class="field">
+                            <label for="aw-price">قیمت (تومان)</label>
+                            <input type="number" id="aw-price" name="price" min="10000" required placeholder="مثلاً: 1500000">
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for="aw-desc">توضیحات</label>
+                        <textarea id="aw-desc" name="description" rows="2" placeholder="توضیح کوتاه درباره اثر…"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label for="aw-image">عکس اثر (JPG/PNG/WebP تا ۸ مگ)</label>
+                        <input type="file" id="aw-image" name="image" accept="image/jpeg,image/png,image/webp">
+                    </div>
+
+                    <button type="submit" class="btn btn-block">افزودن به گالری ✓</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- درآمد ماهانه -->
+        <?php if ($earningsByMonth): ?>
+        <div class="section-heading">
+            <div><h2>درآمد ماهانه</h2></div>
+            <span class="small-muted">فقط سفارش‌های تکمیل‌شده</span>
+        </div>
+
+        <div class="card" style="padding:20px;margin-bottom:28px">
+            <?php foreach ($earningsByMonth as $month => $amount): ?>
+                <div style="margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+                        <b><?= e($month) ?></b>
+                        <span><?= fa_num($amount) ?> تومان</span>
+                    </div>
+                    <div style="background:var(--pink-light);border-radius:8px;height:10px;overflow:hidden">
+                        <div style="background:var(--pink);height:100%;border-radius:8px;width:<?= $maxEarning ? round(($amount / $maxEarning) * 100) : 0 ?>%"></div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
         <?php endif; ?>
 
     </div>

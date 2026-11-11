@@ -29,6 +29,16 @@ usort($artists, function($a, $b) use ($sort) {
 $allCities = array_unique(array_column(all_artists(), 'city'));
 sort($allCities);
 
+// علاقه‌مندی‌های کاربر (هنرمند)
+$favArtists = [];
+if (is_logged_in() && ($p = db())) {
+    try {
+        $s = $p->prepare('SELECT artist_id FROM favorites WHERE user_id = ? AND artist_id IS NOT NULL');
+        $s->execute([current_user()['id']]);
+        $favArtists = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
+    } catch (Throwable $e) {}
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -114,6 +124,13 @@ require __DIR__ . '/includes/header.php';
                                 <h3><?= e($artist['name']) ?></h3>
                                 <p><?= e($artist['specialty']) ?></p>
                             </div>
+
+                            <button type="button"
+                                    class="fav-btn <?= in_array((int)$artist['id'], $favArtists ?? [], true) ? 'fav-active' : '' ?>"
+                                    data-type="artist"
+                                    data-id="<?= e($artist['id']) ?>"
+                                    data-auth="<?= is_logged_in() ? '1' : '0' ?>"
+                                    aria-label="افزودن به علاقه‌مندی‌ها">♡</button>
                         </div>
 
                         <div class="artist-meta">

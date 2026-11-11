@@ -18,6 +18,7 @@ function db(): ?PDO {
     } catch (Throwable $e) { return null; }
 }
 function e($value): string { return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8'); }
+require_once __DIR__ . '/includes/jalali.php';
 function url(string $path=''): string { return $path === '' ? 'index.php' : $path; }
 function flash(string $message, string $type='success'): void { $_SESSION['flash'] = ['message'=>$message, 'type'=>$type]; }
 function show_flash(): void { if (!empty($_SESSION['flash'])) { $f=$_SESSION['flash']; echo '<div class="notice '.e($f['type']).'">'.e($f['message']).'</div>'; unset($_SESSION['flash']); } }

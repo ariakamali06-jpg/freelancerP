@@ -111,12 +111,12 @@ require __DIR__ . '/includes/header.php';
                         <span class="small-muted">
                             <?= e($order['artist_name'] ?? '—') ?> ·
                             <?= e($order['specialty'] ?? '') ?> ·
-                            <span dir="ltr"><?= e($order['created_at']) ?></span>
+                            <?= fa_date($order['created_at']) ?>
                         </span>
                     </div>
                     <div style="text-align:center">
                         <b style="color:var(--pink);font-size:18px;display:block">
-                            <?= number_format((float)$order['amount']) ?> تومان
+                            <?= fa_num($order['amount']) ?> تومان
                         </b>
                         <span class="pill"><?= e($stepLabels[$order['status']] ?? $order['status']) ?></span>
                     </div>

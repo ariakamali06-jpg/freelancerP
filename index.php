@@ -5,6 +5,28 @@ require_once __DIR__ . '/config.php';
 $artists = array_slice(all_artists(), 0, 6);
 $pageTitle = 'خانه';
 
+// علاقه‌مندی‌های کاربر (هنرمند)
+$favArtists = [];
+if (is_logged_in() && ($p = db())) {
+    try {
+        $s = $p->prepare('SELECT artist_id FROM favorites WHERE user_id = ? AND artist_id IS NOT NULL');
+        $s->execute([current_user()['id']]);
+        $favArtists = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
+    } catch (Throwable $e) {}
+}
+
+// آخرین آثار گالری
+$latestWorks = [];
+if ($p) {
+    try {
+        $latestWorks = $p->query(
+            "SELECT aw.id, aw.title, aw.image, aw.price, aw.status
+             FROM artworks aw WHERE aw.status != 'hidden'
+             ORDER BY aw.id DESC LIMIT 3"
+        )->fetchAll();
+    } catch (Throwable $e) {}
+}
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -125,6 +147,30 @@ require __DIR__ . '/includes/header.php';
 </section>
 
 
+<!-- جدیدترین آثار گالری -->
+<?php if ($latestWorks): ?>
+<section class="section">
+    <div class="section-heading">
+        <div>
+            <span class="eyebrow">تازه‌ها</span>
+            <h2>جدیدترین آثار گالری</h2>
+        </div>
+        <a class="text-link" href="gallery.php">مشاهده همه آثار ←</a>
+    </div>
+
+    <div class="category-grid">
+        <?php foreach ($latestWorks as $w): ?>
+            <a class="category-card" href="artwork.php?id=<?= e($w['id']) ?>">
+                <img src="<?= e($w['image'] ?: 'assets/images/work1.jpg') ?>" alt="<?= e($w['title']) ?>">
+                <span class="category-label">
+                    <?= e($w['title']) ?> — <?= fa_num($w['price']) ?> تومان
+                </span>
+            </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- هنرمندان تأییدشده -->
 <section class="section artists-section">
     <div class="section-heading">
@@ -171,6 +217,13 @@ require __DIR__ . '/includes/header.php';
                         <h3><?= e($artist['name']) ?></h3>
                         <p><?= e($artist['specialty']) ?></p>
                     </div>
+
+                    <button type="button"
+                            class="fav-btn <?= in_array((int)$artist['id'], $favArtists ?? [], true) ? 'fav-active' : '' ?>"
+                            data-type="artist"
+                            data-id="<?= e($artist['id']) ?>"
+                            data-auth="<?= is_logged_in() ? '1' : '0' ?>"
+                            aria-label="افزودن به علاقه‌مندی‌ها">♡</button>
                 </div>
 
                 <div class="artist-meta">

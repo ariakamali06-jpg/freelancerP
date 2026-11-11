@@ -20,6 +20,7 @@ $navItems = [
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($pageTitle) ?> | هنرمندشو</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style-v2.css">
 </head>
 
 <body>
@@ -44,7 +45,15 @@ $navItems = [
                     <?= e($itemLabel) ?>
                 </a>
             <?php endforeach; ?>
+            <a href="gallery.php" class="<?= $currentPage === 'gallery.php' ? 'active' : '' ?>">گالری آثار</a>
         </nav>
+
+        <!-- جستجوی سرچ‌بار -->
+        <form class="nav-search" method="get" action="search.php" role="search">
+            <input type="search" name="q" placeholder="جستجوی هنرمند، اثر یا تخصص…"
+                   value="<?= e(trim($_GET['q'] ?? '')) ?>" aria-label="جستجو">
+            <button type="submit" aria-label="جستجو">⌕</button>
+        </form>
 
         <!-- دکمه همبرگری (فقط موبایل) -->
         <button class="hamburger-btn" id="hamburger-btn" type="button"
@@ -56,6 +65,9 @@ $navItems = [
 
         <!-- حساب کاربری -->
         <div class="nav-actions">
+
+            <!-- دکمه حالت شب -->
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="تغییر حالت شب/روز">🌙</button>
 
             <?php if ($user): ?>
 
@@ -145,6 +157,7 @@ $navItems = [
             <?= e($itemLabel) ?>
         </a>
     <?php endforeach; ?>
+    <a href="gallery.php" class="<?= $currentPage === 'gallery.php' ? 'active' : '' ?>">گالری آثار</a>
 
     <?php if ($user): ?>
         <div class="mobile-menu-user">

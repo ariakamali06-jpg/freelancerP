@@ -57,6 +57,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    // علامت‌گذاری پیام خوانده‌شده
+    elseif ($action === 'read_message' && $p) {
+        $msgId = (int)($_POST['message_id'] ?? 0);
+        try {
+            $s = $p->prepare('UPDATE contact_messages SET is_read = 1 WHERE id = ?');
+            $s->execute([$msgId]);
+            flash('پیام خوانده‌شده شد.');
+        } catch (Throwable $e) {}
+    }
 
     header('Location: admin.php');
     exit;
@@ -203,7 +212,7 @@ require __DIR__ . '/includes/header.php';
                                 <td style="padding:12px"><?= e($u['name']) ?></td>
                                 <td style="padding:12px" dir="ltr"><?= e($u['email']) ?></td>
                                 <td style="padding:12px"><span class="pill"><?= e($u['role']) ?></span></td>
-                                <td style="padding:12px" dir="ltr"><?= e($u['created_at'] ?? '—') ?></td>
+                                <td style="padding:12px"><?= fa_date($u['created_at'] ?? null) ?></td>
                                 <td style="padding:12px">
                                     <?php if ((int)$u['id'] !== (int)$user['id']): ?>
                                         <form method="post" onsubmit="return confirm('این کاربر حذف شود؟')">
@@ -265,6 +274,47 @@ require __DIR__ . '/includes/header.php';
                     </tbody>
                 </table>
             </div>
+        <?php endif; ?>
+
+    </div>
+</section>
+
+<!-- صندوق پیام‌های تماس -->
+<div class="section-heading" style="width:min(1200px,94%);margin:0 auto 12px">
+    <div><h2>📩 صندوق پیام‌ها</h2></div>
+    <span class="small-muted"><?= count(array_filter($messages, fn($m) => !$m['is_read'])) ?> پیام خوانده‌نشده</span>
+</div>
+
+<section class="content" style="padding-top:0">
+    <div class="container">
+
+        <?php if (empty($messages)): ?>
+            <div class="empty-state" style="margin-bottom:24px"><p>پیامی وجود ندارد.</p></div>
+        <?php else: ?>
+            <?php foreach ($messages as $m): ?>
+                <div class="card" style="padding:14px 18px;margin-bottom:12px;<?= $m['is_read'] ? 'opacity:.65' : 'border-right:4px solid var(--pink)' ?>">
+                    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                        <div>
+                            <b style="font-size:13px"><?= e($m['name']) ?></b>
+                            <small dir="ltr" class="small-muted" style="margin-right:8px"><?= e($m['email']) ?></small>
+                            <?php if ($m['subject']): ?>
+                                <span class="pill" style="margin-right:8px"><?= e($m['subject']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <small class="small-muted"><?= fa_date($m['created_at']) ?></small>
+                            <?php if (!$m['is_read']): ?>
+                                <form method="post" style="display:inline">
+                                    <input type="hidden" name="action" value="read_message">
+                                    <input type="hidden" name="message_id" value="<?= e($m['id']) ?>">
+                                    <button type="submit" class="btn btn-light" style="padding:4px 12px;font-size:11px">خوانده شد ✓</button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <p style="margin:8px 0 0;font-size:13px"><?= nl2br(e($m['message'])) ?></p>
+                </div>
+            <?php endforeach; ?>
         <?php endif; ?>
 
     </div>

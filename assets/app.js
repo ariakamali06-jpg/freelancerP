@@ -279,4 +279,66 @@
             }
         });
     });
+
+
+    /* -------------------------
+       ۹) حالت شب 🌙 (ذخیره در localStorage)
+    ------------------------- */
+    var themeToggle = document.getElementById('theme-toggle');
+
+    function applyTheme(theme) {
+        document.body.classList.toggle('dark-mode', theme === 'dark');
+        if (themeToggle) themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+
+    // اجرای تم ذخیره‌شده
+    try {
+        applyTheme(localStorage.getItem('honarmandshoo-theme') || 'light');
+    } catch (e) {}
+
+    if (themeToggle) {
+        themeToggle.addEventListener('click', function () {
+            var isDark = document.body.classList.toggle('dark-mode');
+            themeToggle.textContent = isDark ? '☀️' : '🌙';
+            try { localStorage.setItem('honarmandshoo-theme', isDark ? 'dark' : 'light'); } catch (e) {}
+        });
+    }
+
+
+    /* -------------------------
+       ۱۰) علاقه‌مندی‌ها (♡ → favorite.php)
+    ------------------------- */
+    document.querySelectorAll('.fav-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            // مهمان: برو به ورود
+            if (btn.dataset.auth !== '1') {
+                window.location.href = 'login.php';
+                return;
+            }
+
+            var isActive = btn.classList.toggle('fav-active');
+            btn.textContent = isActive ? '❤️' : '♡';
+
+            var body = new URLSearchParams();
+            body.append('type', btn.dataset.type);
+            body.append('id', btn.dataset.id);
+
+            fetch('favorite.php', { method: 'POST', body: body })
+                .then(function (res) {
+                    if (res.status === 401) { window.location.href = 'login.php'; return null; }
+                    return res.json();
+                })
+                .then(function (data) {
+                    if (!data || !data.ok) {
+                        // برگرداندن حالت قبلی در خطا
+                        btn.classList.toggle('fav-active');
+                        btn.textContent = btn.classList.contains('fav-active') ? '❤️' : '♡';
+                    }
+                })
+                .catch(function () {
+                    btn.classList.toggle('fav-active');
+                    btn.textContent = btn.classList.contains('fav-active') ? '❤️' : '♡';
+                });
+        });
+    });
 })();
